@@ -8,8 +8,8 @@ eureka:
 
 spring:
   datasource:
-    username: ${POSTGRES_USER:dbuser}
-    password: ${POSTGRES_PASSWORD:12345}
+    username: ${POSTGRES_USER:sa}
+    password: ${POSTGRES_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:create-drop}
