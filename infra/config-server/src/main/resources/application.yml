@@ -1,0 +1,23 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          search-locations:
+            - classpath:/config-repo/
+            - classpath:/config-repo/main-service/
+            - classpath:/config-repo/stats-server/
+            - classpath:/config-repo/gateway-server/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
