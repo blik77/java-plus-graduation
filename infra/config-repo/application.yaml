@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    username: ${POSTGRES_USER:sa}
+    password: ${POSTGRES_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:create-drop}
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+    open-in-view: false
+  sql:
+    init:
+      mode: ${SQL_INIT_MODE:always}

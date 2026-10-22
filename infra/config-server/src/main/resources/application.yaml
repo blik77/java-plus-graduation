@@ -1,0 +1,35 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          search-locations:
+            - classpath:/config-repo/
+            - classpath:/config-repo/main-service/
+            - classpath:/config-repo/stats-server/
+            - classpath:/config-repo/gateway-server/
+            - classpath:/config-repo/event-service/
+            - classpath:/config-repo/request-service/
+            - classpath:/config-repo/user-service/
+            - classpath:/config-repo/compilation-service/
+            - classpath:/config-repo/comment-service/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/
+  instance:
+    prefer-ip-address: true
