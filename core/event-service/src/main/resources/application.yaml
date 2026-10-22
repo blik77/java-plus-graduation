@@ -1,0 +1,40 @@
+spring:
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+  application:
+    name: event-service
+  config:
+    import: "optional:configserver:http://localhost:8888"
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000  # 2 секунды на установку соединения
+        readTimeout: 5000     # 5 секунд на ожидание ответа
+  circuitbreaker:
+    enabled: true
+
+  datasource:
+    url: jdbc:postgresql://ewm-db:5432/ewm
+    username: ewm
+    password: ewm
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/
+  instance:
+    prefer-ip-address: true
