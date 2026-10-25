@@ -13,6 +13,10 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@NamedEntityGraph(
+        name = "Compilation.withEventIds",
+        attributeNodes = @NamedAttributeNode("eventIds")
+)
 public class Compilation {
 
     @Id
