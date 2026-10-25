@@ -5,14 +5,16 @@ services:
     ports:
       - "6541:5432"
     environment:
-      - POSTGRES_PASSWORD=stat
-      - POSTGRES_USER=stat
-      - POSTGRES_DB=ewm-stats
+      - POSTGRES_DB=ewm_stats
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=12345
     healthcheck:
       test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
       timeout: 5s
       interval: 5s
       retries: 10
+    networks:
+      - app-network
 
   ewm-db:
     image: postgres:16.1
@@ -20,14 +22,101 @@ services:
     ports:
       - "6542:5432"
     environment:
-      - POSTGRES_PASSWORD=ewm
-      - POSTGRES_USER=ewm
       - POSTGRES_DB=ewm
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=12345
     healthcheck:
       test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
       timeout: 5s
       interval: 5s
       retries: 10
+    networks:
+      - app-network
+
+  comment-db:
+    image: postgres:16.1
+    container_name: postgres-ewm-comment-db
+    ports:
+      - "6543:5432"
+    environment:
+      - POSTGRES_DB=ewm_comment
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=12345
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  compilation-db:
+    image: postgres:16.1
+    container_name: postgres-ewm-compilation-db
+    ports:
+      - "6544:5432"
+    environment:
+      - POSTGRES_DB=ewm_compilation
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=12345
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  event-db:
+    image: postgres:16.1
+    container_name: postgres-ewm-event-db
+    ports:
+      - "6545:5432"
+    environment:
+      - POSTGRES_DB=ewm_event
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=12345
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  request-db:
+    image: postgres:16.1
+    container_name: postgres-ewm-request-db
+    ports:
+      - "6546:5432"
+    environment:
+      - POSTGRES_DB=ewm_request
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=12345
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  user-db:
+    image: postgres:16.1
+    container_name: postgres-ewm-user-db
+    ports:
+      - "6547:5432"
+    environment:
+      - POSTGRES_DB=ewm_user
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=12345
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - app-network
 
   discovery-server:
     build: infra/discovery-server
@@ -40,6 +129,8 @@ services:
       timeout: 5s
       retries: 20
       start_period: 30s
+    networks:
+      - app-network
 
   config-server:
     build: infra/config-server
@@ -54,127 +145,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  stats-server:
-    build: stat/stats-server
-    image: stats-server
-    depends_on:
-      stats-db:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
     environment:
-      - DB_URL=jdbc:postgresql://stats-db:5432/ewm-stats
-      - DB_DRIVER=org.postgresql.Driver
-      - POSTGRES_USER=stat
-      - POSTGRES_PASSWORD=stat
-      - JPA_DDL_AUTO=create
-      - SQL_INIT_MODE=never
-
-  ewm-service:
-    build: core/main-service
-    image: ewm-main-service
-    depends_on:
-      ewm-db:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-    environment:
-      - DB_URL=jdbc:postgresql://ewm-db:5432/ewm
-      - DB_DRIVER=org.postgresql.Driver
-      - POSTGRES_USER=ewm
-      - POSTGRES_PASSWORD=ewm
-      - JPA_DDL_AUTO=create
-      - SQL_INIT_MODE=never
-
-  user-service:
-    build: core/user-service
-    image: user-service
-    container_name: user-service
-    ports:
-      - "8081:8081"
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      ewm-db:
-        condition: service_healthy
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
-      - SPRING_DATASOURCE_USERNAME=ewm
-      - SPRING_DATASOURCE_PASSWORD=ewm
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - SPRING_SQL_INIT_MODE=never
-
-  event-service:
-    build: core/event-service
-    image: event-service
-    container_name: event-service
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      ewm-db:
-        condition: service_healthy
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
-      - SPRING_DATASOURCE_USERNAME=ewm
-      - SPRING_DATASOURCE_PASSWORD=ewm
-
-  request-service:
-    build: core/request-service
-    image: request-service
-    container_name: request-service
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      ewm-db:
-        condition: service_healthy
-    environment:
-      - SPRING_APPLICATION_NAME=request-service
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
-      - SPRING_DATASOURCE_USERNAME=ewm
-      - SPRING_DATASOURCE_PASSWORD=ewm
-
-  compilation-service:
-    build: core/compilation-service
-    image: compilation-service
-    container_name: compilation-service
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      ewm-db:
-        condition: service_healthy
-    environment:
-      - SPRING_APPLICATION_NAME=compilation-service
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
-      - SPRING_DATASOURCE_USERNAME=ewm
-      - SPRING_DATASOURCE_PASSWORD=ewm
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-
-  comment-service:
-    build: core/comment-service
-    image: comment-service
-    container_name: comment-service
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      ewm-db:
-        condition: service_healthy
-    environment:
-      - SPRING_APPLICATION_NAME=comment-service
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
-      - SPRING_DATASOURCE_USERNAME=ewm
-      - SPRING_DATASOURCE_PASSWORD=ewm
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - EUREKA_URI=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
 
   gateway-server:
     build: infra/gateway-server
@@ -186,3 +160,140 @@ services:
         condition: service_healthy
       config-server:
         condition: service_healthy
+    environment:
+      - EUREKA_URI=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
+
+  stats-server:
+    build: stat/stats-server
+    image: stats-server
+    depends_on:
+      stats-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/ewm_stats
+      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
+      - EUREKA_URI=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
+
+  main-service:
+    build: core/main-service
+    image: ewm-main-service
+    depends_on:
+      ewm-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
+      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
+      - EUREKA_URI=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
+
+  user-service:
+    build: core/user-service
+    image: user-service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      user-db:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://user-db:5432/ewm_user
+      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - EUREKA_URI=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
+
+  event-service:
+    build: core/event-service
+    image: event-service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      event-db:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://event-db:5432/ewm_event
+      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - EUREKA_URI=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
+
+  request-service:
+    build: core/request-service
+    image: request-service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      request-db:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://request-db:5432/ewm_request
+      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - EUREKA_URI=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
+
+  compilation-service:
+    build: core/compilation-service
+    image: compilation-service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      compilation-db:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://compilation-db:5432/ewm_compilation
+      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - EUREKA_URI=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
+
+  comment-service:
+    build: core/comment-service
+    image: comment-service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      comment-db:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://comment-db:5432/ewm_comment
+      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - EUREKA_URI=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

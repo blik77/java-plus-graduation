@@ -16,7 +16,6 @@ public class Request {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 👈 ЗАМЕНИЛИ User на Long requesterId
     @Column(name = "requester_id", nullable = false)
     private Long requesterId;
 

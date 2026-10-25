@@ -1,12 +1,12 @@
 spring:
+  application:
+    name: event-service
+  config:
+    import: "optional:configserver:"
   cloud:
     openfeign:
       circuitbreaker:
         enabled: true
-  application:
-    name: event-service
-  config:
-    import: "optional:configserver:http://localhost:8888"
 
 feign:
   client:
@@ -17,24 +17,10 @@ feign:
   circuitbreaker:
     enabled: true
 
-  datasource:
-    url: jdbc:postgresql://ewm-db:5432/ewm
-    username: ewm
-    password: ewm
-    driver-class-name: org.postgresql.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-    show-sql: true
-
 eureka:
   client:
     service-url:
-      defaultZone: http://discovery-server:8761/eureka/
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
   instance:
     prefer-ip-address: true
+    instance-id: "${spring.application.name}:${random.value}"

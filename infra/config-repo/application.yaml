@@ -1,16 +1,25 @@
 spring:
   datasource:
-    username: ${POSTGRES_USER:sa}
-    password: ${POSTGRES_PASSWORD:}
+    username: dbuser
+    password: 12345
+    driver-class-name: org.postgresql.Driver
   jpa:
+    show-sql: true
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:create-drop}
+      ddl-auto: create
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           time_zone: UTC
     open-in-view: false
   sql:
     init:
-      mode: ${SQL_INIT_MODE:always}
+      mode: never
+
+logging:
+  level:
+    org.springframework.jdbc.core: DEBUG
+    org.hibernate.SQL: DEBUG
+    com.zaxxer.hikari: DEBUG
