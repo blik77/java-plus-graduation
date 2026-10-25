@@ -1,7 +1,6 @@
 package evm.event.service;
 
 import evm.event.dto.*;
-import evm.event.model.Event;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.LocalDateTime;
@@ -9,7 +8,6 @@ import java.util.List;
 
 public interface EventService {
 
-    // --- Public ---
     List<EventShortDto> getPublicEvents(String text, List<Long> categories, Boolean paid,
                                         LocalDateTime rangeStart, LocalDateTime rangeEnd,
                                         Boolean onlyAvailable, String sort,
@@ -18,7 +16,6 @@ public interface EventService {
 
     EventFullDto getPublicEventById(Long id, HttpServletRequest request);
 
-    // --- Private ---
     List<EventShortDto> getUserEvents(Long userId, Integer from, Integer size);
 
     EventFullDto addEvent(Long userId, NewEventDto newEventDto);
@@ -27,7 +24,6 @@ public interface EventService {
 
     EventFullDto updateUserEvent(Long userId, Long eventId, UpdateEventUserRequest request);
 
-    // --- Admin ---
     List<EventFullDto> getAdminEvents(List<Long> users, List<String> states,
                                       List<Long> categories,
                                       LocalDateTime rangeStart, LocalDateTime rangeEnd,

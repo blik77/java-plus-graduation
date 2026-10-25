@@ -48,10 +48,6 @@ public class EventServiceImpl implements EventService {
     private final RequestClient requestClient;
     private final StatsClient statsClient;
 
-// =========================================================================
-// PUBLIC
-// =========================================================================
-
     @Override
     @Transactional(readOnly = true)
     public List<EventShortDto> getEventsByIds(List<Long> ids) {
@@ -124,7 +120,7 @@ public class EventServiceImpl implements EventService {
                 e,
                 viewsMap.getOrDefault(e.getId(), 0L),
                 confirmedMap.getOrDefault(e.getId(), 0L),
-                userNamesMap.getOrDefault(e.getInitiatorId(), "Unknown") // 👈 БЕРЕМ ИМЯ ИЗ МАПЫ!
+                userNamesMap.getOrDefault(e.getInitiatorId(), "Unknown") // БЕРЕМ ИМЯ ИЗ МАПЫ!
             ))
             .collect(Collectors.toList());
 
@@ -147,10 +143,6 @@ public class EventServiceImpl implements EventService {
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
         return EventMapper.toFullDto(event, views, confirmed, userName);
     }
-
-// =========================================================================
-// PRIVATE
-// =========================================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -223,10 +215,6 @@ public class EventServiceImpl implements EventService {
         return EventMapper.toFullDto(saved, getViews(saved), confirmed, userName);
     }
 
-// =========================================================================
-// ADMIN
-// =========================================================================
-
     @Override
     @Transactional(readOnly = true)
     public List<EventFullDto> getAdminEvents(List<Long> users, List<String> states,
@@ -267,10 +255,6 @@ public class EventServiceImpl implements EventService {
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
         return EventMapper.toFullDto(saved, getViews(saved), confirmed, userName);
     }
-
-// =========================================================================
-// Вспомогательные методы
-// =========================================================================
 
     // Отправляет хит в сервис статистики
     private void sendHit(HttpServletRequest request) {
