@@ -20,7 +20,6 @@
         <module>request-service</module>
         <module>comment-service</module>
         <module>compilation-service</module>
-        <module>main-service</module>
     </modules>
 
 </project>

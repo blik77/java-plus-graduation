@@ -16,23 +16,6 @@ services:
     networks:
       - app-network
 
-  ewm-db:
-    image: postgres:16.1
-    container_name: postgres-ewm-main-db
-    ports:
-      - "6542:5432"
-    environment:
-      - POSTGRES_DB=ewm
-      - POSTGRES_USER=dbuser
-      - POSTGRES_PASSWORD=12345
-    healthcheck:
-      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
-      timeout: 5s
-      interval: 5s
-      retries: 10
-    networks:
-      - app-network
-
   comment-db:
     image: postgres:16.1
     container_name: postgres-ewm-comment-db
@@ -175,23 +158,6 @@ services:
         condition: service_healthy
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/ewm_stats
-      - SPRING_DATASOURCE_USERNAME=dbuser
-      - SPRING_DATASOURCE_PASSWORD=12345
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
-      - EUREKA_URI=http://discovery-server:8761/eureka/
-    networks:
-      - app-network
-
-  main-service:
-    build: core/main-service
-    image: ewm-main-service
-    depends_on:
-      ewm-db:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
       - SPRING_DATASOURCE_USERNAME=dbuser
       - SPRING_DATASOURCE_PASSWORD=12345
       - SPRING_JPA_HIBERNATE_DDL_AUTO=create

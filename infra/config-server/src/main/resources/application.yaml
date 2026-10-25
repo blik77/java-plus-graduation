@@ -12,7 +12,6 @@ spring:
         native:
           search-locations:
             - classpath:/config-repo/
-            - classpath:/config-repo/main-service/
             - classpath:/config-repo/stats-server/
             - classpath:/config-repo/gateway-server/
             - classpath:/config-repo/event-service/
