@@ -13,6 +13,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "events")
+@NamedEntityGraph(
+    name = "Event.withCategory",
+    attributeNodes = @NamedAttributeNode("category")
+)
 public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
