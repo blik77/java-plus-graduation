@@ -25,17 +25,21 @@
 ## Как запустить проект
 
 ### Требования
-- Docker
+- Docker и Docker Compose
 - Java 21 (для локального запуска отдельных модулей)
-- Maven 3.8+
+- Maven 3.9+ (https://maven.apache.org/download.cgi)
 
 ### Запуск через Docker Compose
 1. Перейдите в корневую директорию проекта
 2. Выполните команду:
    ```bash
+   mvn clean install -DskipTests
+3. Выполните команду:
+   ```bash
    docker-compose up --build
-3. После завершения сборки и старта всех контейнеров, API Gateway будет доступен по адресу: http://localhost:8080.
-4. Панель Eureka Server: http://localhost:8761
+4. После завершения сборки и старта всех контейнеров, API Gateway будет доступен по адресу: http://localhost:8080.
+5. Панель Eureka Server: http://localhost:8761
+   *(Для локальной разработки (без Docker) необходимо запускать сервисы в строгом порядке: discovery-server → config-server → остальные сервисы).*
 
 ### Локальный запуск (для разработки)
 1. Запустите discovery-server и config-server.
