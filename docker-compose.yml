@@ -213,7 +213,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://user-db:5432/ewm_user
       - SPRING_DATASOURCE_USERNAME=dbuser
       - SPRING_DATASOURCE_PASSWORD=12345
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
       - EUREKA_URI=http://discovery-server:8761/eureka/
     networks:
       - app-network
@@ -232,7 +232,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://event-db:5432/ewm_event
       - SPRING_DATASOURCE_USERNAME=dbuser
       - SPRING_DATASOURCE_PASSWORD=12345
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
       - EUREKA_URI=http://discovery-server:8761/eureka/
     networks:
       - app-network
@@ -251,7 +251,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://request-db:5432/ewm_request
       - SPRING_DATASOURCE_USERNAME=dbuser
       - SPRING_DATASOURCE_PASSWORD=12345
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
       - EUREKA_URI=http://discovery-server:8761/eureka/
     networks:
       - app-network
@@ -270,7 +270,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://compilation-db:5432/ewm_compilation
       - SPRING_DATASOURCE_USERNAME=dbuser
       - SPRING_DATASOURCE_PASSWORD=12345
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
       - EUREKA_URI=http://discovery-server:8761/eureka/
     networks:
       - app-network
@@ -289,7 +289,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://comment-db:5432/ewm_comment
       - SPRING_DATASOURCE_USERNAME=dbuser
       - SPRING_DATASOURCE_PASSWORD=12345
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
       - EUREKA_URI=http://discovery-server:8761/eureka/
     networks:
       - app-network
