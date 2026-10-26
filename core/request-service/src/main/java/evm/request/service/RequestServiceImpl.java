@@ -76,18 +76,20 @@ public class RequestServiceImpl implements RequestService {
             throw new ConflictException("Нельзя участвовать в неопубликованном событии.");
         }
 
+        long confirmedCount = requestRepository.countByEventIdAndStatus(eventId, Status.CONFIRMED);
+        if (
+                event.getParticipantLimit() != null &&
+                event.getParticipantLimit() > 0 &&
+                confirmedCount >= event.getParticipantLimit()
+        ) {
+            throw new ConflictException("У события достигнут лимит запросов на участие");
+        }
+
         Status status;
-        if (!Boolean.TRUE.equals(event.getRequestModeration()) || event.getParticipantLimit() == null || event.getParticipantLimit() == 0) {
+        if (!event.getRequestModeration()) {
             status = Status.CONFIRMED;
         } else {
             status = Status.PENDING;
-        }
-
-        if (status == Status.CONFIRMED && event.getParticipantLimit() > 0) {
-            long confirmedCount = requestRepository.countByEventIdAndStatus(eventId, Status.CONFIRMED);
-            if (confirmedCount >= event.getParticipantLimit()) {
-                throw new ConflictException("У события достигнут лимит запросов на участие");
-            }
         }
 
         Request request = mapper.mapToRequest(userId, eventId);
