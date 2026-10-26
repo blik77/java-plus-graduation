@@ -86,7 +86,7 @@ public class RequestServiceImpl implements RequestService {
         }
 
         Status status;
-        if (!event.getRequestModeration()) {
+        if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
             status = Status.CONFIRMED;
         } else {
             status = Status.PENDING;
