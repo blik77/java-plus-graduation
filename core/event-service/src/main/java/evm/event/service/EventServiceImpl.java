@@ -5,6 +5,8 @@ import evm.category.repository.CategoryRepository;
 import evm.event.client.RequestClient;
 import evm.event.client.UserClient;
 import evm.event.dto.*;
+import evm.event.dto.params.AdminEventSearchParams;
+import evm.event.dto.params.PublicEventSearchParams;
 import evm.event.mapper.EventMapper;
 import evm.event.mapper.LocationMapper;
 import evm.event.model.Event;
@@ -79,29 +81,33 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EventShortDto> getPublicEvents(String text, List<Long> categories, Boolean paid,
-                                               LocalDateTime rangeStart, LocalDateTime rangeEnd,
-                                               Boolean onlyAvailable, String sort,
-                                               Integer from, Integer size,
+    public List<EventShortDto> getPublicEvents(PublicEventSearchParams params,
                                                HttpServletRequest request) {
-        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+        if (
+                params.getRangeStart() != null &&
+                params.getRangeEnd() != null &&
+                params.getRangeStart().isAfter(params.getRangeEnd())
+        ) {
             throw new IllegalArgumentException("rangeStart не может быть позже rangeEnd");
         }
 
         sendHit(request);
 
-        Pageable pageable = "EVENT_DATE".equals(sort)
-            ? PageRequest.of(from / size, size, Sort.by("eventDate").ascending())
-            : PageRequest.of(from / size, size);
+        Pageable pageable = "EVENT_DATE".equals(params.getSort())
+            ? PageRequest.of(params.getFrom() / params.getSize(), params.getSize(), Sort.by("eventDate").ascending())
+            : PageRequest.of(params.getFrom() / params.getSize(), params.getSize());
 
-        Specification<Event> spec = EventSpecification.publicFilter(text, categories, paid, rangeStart, rangeEnd);
+        Specification<Event> spec = EventSpecification.publicFilter(
+                params.getText(), params.getCategories(), params.getPaid(),
+                params.getRangeStart(), params.getRangeEnd()
+        );
         List<Event> events = eventRepository.findAll(spec, pageable).getContent();
 
         if (events.isEmpty()) return List.of();
 
         Map<Long, Long> confirmedMap = getConfirmedRequestsMap(events);
 
-        if (onlyAvailable != null && onlyAvailable) {
+        if (params.getOnlyAvailable() != null && params.getOnlyAvailable()) {
             events = events.stream()
                 .filter(e -> e.getParticipantLimit() == 0 ||
                     e.getParticipantLimit() > confirmedMap.getOrDefault(e.getId(), 0L))
@@ -124,7 +130,7 @@ public class EventServiceImpl implements EventService {
             ))
             .collect(Collectors.toList());
 
-        if ("VIEWS".equals(sort)) {
+        if ("VIEWS".equals(params.getSort())) {
             result.sort(Comparator.comparingLong(EventShortDto::getViews).reversed());
         }
         return result;
@@ -217,12 +223,14 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EventFullDto> getAdminEvents(List<Long> users, List<String> states,
-                                             List<Long> categories,
-                                             LocalDateTime rangeStart, LocalDateTime rangeEnd,
-                                             Integer from, Integer size) {
-        Pageable pageable = PageRequest.of(from / size, size, Sort.by("id").ascending());
-        Specification<Event> spec = EventSpecification.adminFilter(users, states, categories, rangeStart, rangeEnd);
+    public List<EventFullDto> getAdminEvents(AdminEventSearchParams params) {
+        Pageable pageable = PageRequest.of(
+            params.getFrom() / params.getSize(), params.getSize(), Sort.by("id").ascending()
+        );
+        Specification<Event> spec = EventSpecification.adminFilter(
+            params.getUsers(), params.getStates(), params.getCategories(),
+            params.getRangeStart(), params.getRangeEnd()
+        );
         List<Event> events = eventRepository.findAll(spec, pageable).getContent();
 
         if (events.isEmpty()) return List.of();

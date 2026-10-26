@@ -2,6 +2,7 @@ package evm.event.controller;
 
 import evm.event.dto.EventFullDto;
 import evm.event.dto.UpdateEventAdminRequest;
+import evm.event.dto.params.AdminEventSearchParams;
 import evm.event.service.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,13 +41,22 @@ public class AdminEventController {
             @RequestParam(required = false)
             @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeEnd,
             @RequestParam(defaultValue = "0") Integer from,
-            @RequestParam(defaultValue = "10") Integer size) {
-
+            @RequestParam(defaultValue = "10") Integer size
+    ) {
         log.info("GET /admin/events — users={}, states={}, categories={}",
                 users, states, categories);
 
-        return eventService.getAdminEvents(
-                users, states, categories, rangeStart, rangeEnd, from, size);
+        AdminEventSearchParams searchParams = AdminEventSearchParams.builder()
+                .users(users)
+                .states(states)
+                .categories(categories)
+                .rangeStart(rangeStart)
+                .rangeEnd(rangeEnd)
+                .from(from)
+                .size(size)
+                .build();
+
+        return eventService.getAdminEvents(searchParams);
     }
 
     // Публикация или отклонение события

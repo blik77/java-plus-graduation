@@ -2,6 +2,7 @@ package evm.event.controller;
 
 import evm.event.dto.EventFullDto;
 import evm.event.dto.EventShortDto;
+import evm.event.dto.params.PublicEventSearchParams;
 import evm.event.service.EventService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -48,14 +49,24 @@ public class PublicEventController {
             @RequestParam(defaultValue = "0") Integer from,
             @RequestParam(defaultValue = "10") Integer size,
             // HttpServletRequest нужен, чтобы получить ip и uri для статистики
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         log.info("GET /events — text={}, categories={}, paid={}, sort={}",
                 text, categories, paid, sort);
 
-        return eventService.getPublicEvents(
-                text, categories, paid, rangeStart, rangeEnd,
-                onlyAvailable, sort, from, size, request);
+        PublicEventSearchParams searchParams = PublicEventSearchParams.builder()
+                .text(text)
+                .categories(categories)
+                .paid(paid)
+                .rangeStart(rangeStart)
+                .rangeEnd(rangeEnd)
+                .onlyAvailable(onlyAvailable)
+                .sort(sort)
+                .from(from)
+                .size(size)
+                .build();
+
+        return eventService.getPublicEvents(searchParams, request);
     }
 
     // Подробная информация об опубликованном событии.

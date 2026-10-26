@@ -1,17 +1,15 @@
 package evm.event.service;
 
 import evm.event.dto.*;
+import evm.event.dto.params.AdminEventSearchParams;
+import evm.event.dto.params.PublicEventSearchParams;
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public interface EventService {
 
-    List<EventShortDto> getPublicEvents(String text, List<Long> categories, Boolean paid,
-                                        LocalDateTime rangeStart, LocalDateTime rangeEnd,
-                                        Boolean onlyAvailable, String sort,
-                                        Integer from, Integer size,
+    List<EventShortDto> getPublicEvents(PublicEventSearchParams params,
                                         HttpServletRequest request);
 
     EventFullDto getPublicEventById(Long id, HttpServletRequest request);
@@ -24,10 +22,7 @@ public interface EventService {
 
     EventFullDto updateUserEvent(Long userId, Long eventId, UpdateEventUserRequest request);
 
-    List<EventFullDto> getAdminEvents(List<Long> users, List<String> states,
-                                      List<Long> categories,
-                                      LocalDateTime rangeStart, LocalDateTime rangeEnd,
-                                      Integer from, Integer size);
+    List<EventFullDto> getAdminEvents(AdminEventSearchParams params);
 
     EventFullDto updateAdminEvent(Long eventId, UpdateEventAdminRequest request);
 
