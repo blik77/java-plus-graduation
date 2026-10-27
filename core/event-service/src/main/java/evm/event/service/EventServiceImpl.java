@@ -18,10 +18,10 @@ import evm.common.exceptions.NotFoundException;
 import evm.stat.client.StatsClient;
 import evm.stat.dto.HitDto;
 import evm.stat.dto.ViewStatsDto;
+import evm.event.util.OffsetBasedPageRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -92,14 +92,14 @@ public class EventServiceImpl implements EventService {
         }
 
         sendHit(request);
-
-        Pageable pageable = "EVENT_DATE".equals(params.getSort())
-            ? PageRequest.of(params.getFrom() / params.getSize(), params.getSize(), Sort.by("eventDate").ascending())
-            : PageRequest.of(params.getFrom() / params.getSize(), params.getSize());
+        Sort sort = "EVENT_DATE".equals(params.getSort()) ?
+            Sort.by("eventDate").ascending() :
+            Sort.unsorted();
+        Pageable pageable = OffsetBasedPageRequest.of(params.getFrom(), params.getSize(), sort);
 
         Specification<Event> spec = EventSpecification.publicFilter(
-                params.getText(), params.getCategories(), params.getPaid(),
-                params.getRangeStart(), params.getRangeEnd()
+            params.getText(), params.getCategories(), params.getPaid(),
+            params.getRangeStart(), params.getRangeEnd()
         );
         List<Event> events = eventRepository.findAll(spec, pageable).getContent();
 
@@ -153,7 +153,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(readOnly = true)
     public List<EventShortDto> getUserEvents(Long userId, Integer from, Integer size) {
-        Pageable pageable = PageRequest.of(from / size, size);
+        Pageable pageable = OffsetBasedPageRequest.of(from, size);
         List<Event> events = eventRepository.findAllByInitiatorId(userId, pageable);
 
         Map<Long, Long> viewsMap = getViewsMap(events);
@@ -224,8 +224,8 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(readOnly = true)
     public List<EventFullDto> getAdminEvents(AdminEventSearchParams params) {
-        Pageable pageable = PageRequest.of(
-            params.getFrom() / params.getSize(), params.getSize(), Sort.by("id").ascending()
+        Pageable pageable = OffsetBasedPageRequest.of(
+            params.getFrom(), params.getSize(), Sort.by("id").ascending()
         );
         Specification<Event> spec = EventSpecification.adminFilter(
             params.getUsers(), params.getStates(), params.getCategories(),
