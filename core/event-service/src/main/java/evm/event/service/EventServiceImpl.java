@@ -92,10 +92,6 @@ public class EventServiceImpl implements EventService {
         }
 
         sendHit(request);
-        Sort sort = "EVENT_DATE".equals(params.getSort()) ?
-            Sort.by("eventDate").ascending() :
-            Sort.unsorted();
-        Pageable pageable = OffsetBasedPageRequest.of(params.getFrom(), params.getSize(), sort);
 
         Specification<Event> spec = EventSpecification.publicFilter(
             params.getText(), params.getCategories(), params.getPaid(),
@@ -106,22 +102,34 @@ public class EventServiceImpl implements EventService {
         if (params.getOnlyAvailable() != null && params.getOnlyAvailable()) {
             List<Event> candidateEvents = eventRepository.findAll(spec);
             availableEventIds = filterAvailableEvents(candidateEvents);
+            spec = spec.and(EventSpecification.onlyAvailable(availableEventIds));
         }
 
-        spec = spec.and(EventSpecification.onlyAvailable(params.getOnlyAvailable(), availableEventIds));
+        List<Event> events;
+        if ("EVENT_DATE".equals(params.getSort())) {
+            Pageable pageable = OffsetBasedPageRequest.of(
+                params.getFrom(),
+                params.getSize(),
+                    Sort.by("eventDate").ascending()
+            );
 
-        List<Event> events = eventRepository.findAll(spec, pageable).getContent();
+            events = eventRepository.findAll(spec, pageable).getContent();
+        } else if ("VIEWS".equals(params.getSort())) {
+            events = eventRepository.findAll(spec);
+            events = events.subList(params.getFrom(), params.getFrom() + params.getSize());
+        } else {
+            Pageable pageable = OffsetBasedPageRequest.of(
+                params.getFrom(),
+                params.getSize(),
+                Sort.unsorted()
+            );
+
+            events = eventRepository.findAll(spec, pageable).getContent();
+        }
 
         if (events.isEmpty()) return List.of();
 
         Map<Long, Long> confirmedMap = getConfirmedRequestsMap(events);
-
-        if (params.getOnlyAvailable() != null && params.getOnlyAvailable()) {
-            events = events.stream()
-                .filter(e -> e.getParticipantLimit() == 0 ||
-                    e.getParticipantLimit() > confirmedMap.getOrDefault(e.getId(), 0L))
-                .collect(Collectors.toList());
-        }
 
         Map<Long, Long> viewsMap = getViewsMap(events);
 
@@ -135,12 +143,13 @@ public class EventServiceImpl implements EventService {
                 e,
                 viewsMap.getOrDefault(e.getId(), 0L),
                 confirmedMap.getOrDefault(e.getId(), 0L),
-                userNamesMap.getOrDefault(e.getInitiatorId(), "Unknown") // БЕРЕМ ИМЯ ИЗ МАПЫ!
+                userNamesMap.getOrDefault(e.getInitiatorId(), "Unknown")
             ))
             .collect(Collectors.toList());
 
         if ("VIEWS".equals(params.getSort())) {
             result.sort(Comparator.comparingLong(EventShortDto::getViews).reversed());
+            return result.subList(params.getFrom(), params.getFrom() + params.getSize());
         }
         return result;
     }
@@ -150,9 +159,7 @@ public class EventServiceImpl implements EventService {
             return List.of();
         }
 
-        List<Long> eventIds = events.stream().map(Event::getId).toList();
-
-        Map<Long, Long> confirmedCounts = requestClient.getConfirmedCounts(eventIds);
+        Map<Long, Long> confirmedCounts = getConfirmedRequestsMap(events);
 
         return events.stream()
                 .filter(event -> {
@@ -175,7 +182,7 @@ public class EventServiceImpl implements EventService {
 
         sendHit(request);
         Long views = getViews(event);
-        Long confirmed = 0L;
+        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
         return EventMapper.toFullDto(event, views, confirmed, userName);
@@ -225,7 +232,7 @@ public class EventServiceImpl implements EventService {
         }
 
         Long views = getViews(event);
-        Long confirmed = 0L;
+        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);;
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
         return EventMapper.toFullDto(event, views, confirmed, userName);
@@ -246,7 +253,7 @@ public class EventServiceImpl implements EventService {
 
         applyUserUpdates(event, dto);
         Event saved = eventRepository.save(event);
-        Long confirmed = 0L;
+        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);;
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
         return EventMapper.toFullDto(saved, getViews(saved), confirmed, userName);
@@ -289,7 +296,7 @@ public class EventServiceImpl implements EventService {
         Event event = getEventOrThrow(eventId);
         applyAdminUpdates(event, dto);
         Event saved = eventRepository.save(event);
-        Long confirmed = 0L;
+        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);;
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
         return EventMapper.toFullDto(saved, getViews(saved), confirmed, userName);

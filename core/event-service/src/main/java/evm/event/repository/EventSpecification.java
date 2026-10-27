@@ -102,12 +102,8 @@ public class EventSpecification {
         };
     }
 
-    public static Specification<Event> onlyAvailable(Boolean onlyAvailable, List<Long> availableEventIds) {
+    public static Specification<Event> onlyAvailable(List<Long> availableEventIds) {
         return (root, query, cb) -> {
-            if (onlyAvailable == null || !onlyAvailable) {
-                return cb.conjunction();
-            }
-
             if (availableEventIds == null || availableEventIds.isEmpty()) {
                 return cb.disjunction();
             }
