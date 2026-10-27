@@ -98,10 +98,9 @@ public class EventServiceImpl implements EventService {
             params.getRangeStart(), params.getRangeEnd()
         );
 
-        List<Long> availableEventIds = null;
         if (params.getOnlyAvailable() != null && params.getOnlyAvailable()) {
             List<Event> candidateEvents = eventRepository.findAll(spec);
-            availableEventIds = filterAvailableEvents(candidateEvents);
+            List<Long> availableEventIds = filterAvailableEvents(candidateEvents);
             spec = spec.and(EventSpecification.onlyAvailable(availableEventIds));
         }
 
@@ -116,7 +115,6 @@ public class EventServiceImpl implements EventService {
             events = eventRepository.findAll(spec, pageable).getContent();
         } else if ("VIEWS".equals(params.getSort())) {
             events = eventRepository.findAll(spec);
-            events = events.subList(params.getFrom(), params.getFrom() + params.getSize());
         } else {
             Pageable pageable = OffsetBasedPageRequest.of(
                 params.getFrom(),
@@ -232,7 +230,7 @@ public class EventServiceImpl implements EventService {
         }
 
         Long views = getViews(event);
-        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);;
+        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
         return EventMapper.toFullDto(event, views, confirmed, userName);
@@ -253,7 +251,7 @@ public class EventServiceImpl implements EventService {
 
         applyUserUpdates(event, dto);
         Event saved = eventRepository.save(event);
-        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);;
+        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
         return EventMapper.toFullDto(saved, getViews(saved), confirmed, userName);
@@ -296,7 +294,7 @@ public class EventServiceImpl implements EventService {
         Event event = getEventOrThrow(eventId);
         applyAdminUpdates(event, dto);
         Event saved = eventRepository.save(event);
-        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);;
+        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
         return EventMapper.toFullDto(saved, getViews(saved), confirmed, userName);
