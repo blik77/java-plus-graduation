@@ -101,4 +101,18 @@ public class EventSpecification {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+
+    public static Specification<Event> onlyAvailable(Boolean onlyAvailable, List<Long> availableEventIds) {
+        return (root, query, cb) -> {
+            if (onlyAvailable == null || !onlyAvailable) {
+                return cb.conjunction();
+            }
+
+            if (availableEventIds == null || availableEventIds.isEmpty()) {
+                return cb.disjunction();
+            }
+
+            return root.get("id").in(availableEventIds);
+        };
+    }
 }

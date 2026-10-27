@@ -101,6 +101,15 @@ public class EventServiceImpl implements EventService {
             params.getText(), params.getCategories(), params.getPaid(),
             params.getRangeStart(), params.getRangeEnd()
         );
+
+        List<Long> availableEventIds = null;
+        if (params.getOnlyAvailable() != null && params.getOnlyAvailable()) {
+            List<Event> candidateEvents = eventRepository.findAll(spec);
+            availableEventIds = filterAvailableEvents(candidateEvents);
+        }
+
+        spec = spec.and(EventSpecification.onlyAvailable(params.getOnlyAvailable(), availableEventIds));
+
         List<Event> events = eventRepository.findAll(spec, pageable).getContent();
 
         if (events.isEmpty()) return List.of();
@@ -134,6 +143,28 @@ public class EventServiceImpl implements EventService {
             result.sort(Comparator.comparingLong(EventShortDto::getViews).reversed());
         }
         return result;
+    }
+
+    private List<Long> filterAvailableEvents(List<Event> events) {
+        if (events.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> eventIds = events.stream().map(Event::getId).toList();
+
+        Map<Long, Long> confirmedCounts = requestClient.getConfirmedCounts(eventIds);
+
+        return events.stream()
+                .filter(event -> {
+                    Integer limit = event.getParticipantLimit();
+                    if (limit == null || limit == 0) {
+                        return true;
+                    }
+                    long confirmed = confirmedCounts.getOrDefault(event.getId(), 0L);
+                    return confirmed < limit;
+                })
+                .map(Event::getId)
+                .toList();
     }
 
     @Override
