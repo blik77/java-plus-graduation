@@ -1,0 +1,97 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        # ==========================================
+        # 1. СПЕЦИФИЧНЫЕ МАРШРУТЫ (СТРОГО ПЕРВЫМИ!)
+        # ==========================================
+
+        # --- КОММЕНТАРИИ (Private) ---
+        - id: ewm-comment-service-private-events
+          uri: lb://comment-service
+          predicates:
+            - Path=/users/*/events/*/comments/**
+        - id: ewm-comment-service-private-users
+          uri: lb://comment-service
+          predicates:
+            - Path=/users/*/comments/**
+
+        # --- КОММЕНТАРИИ (Admin & Public) ---
+        - id: ewm-comment-service-admin
+          uri: lb://comment-service
+          predicates:
+            - Path=/admin/comments/**
+        - id: ewm-comment-service-public-events
+          uri: lb://comment-service
+          predicates:
+            - Path=/events/*/comments/**
+        - id: ewm-comment-service-public
+          uri: lb://comment-service
+          predicates:
+            - Path=/comments/**
+
+        # --- ЗАПРОСЫ (Requests) ---
+        - id: ewm-request-service-user-requests
+          uri: lb://request-service
+          predicates:
+            - Path=/users/*/requests/**
+        - id: ewm-request-service-admin
+          uri: lb://request-service
+          predicates:
+            - Path=/admin/requests/**
+        - id: ewm-request-service-event-requests
+          uri: lb://request-service
+          predicates:
+            - Path=/users/*/events/*/requests/**
+
+        # --- ПОДБОРКИ (Compilations) ---
+        - id: ewm-compilation-service-admin
+          uri: lb://compilation-service
+          predicates:
+            - Path=/admin/compilations/**
+        - id: ewm-compilation-service-public
+          uri: lb://compilation-service
+          predicates:
+            - Path=/compilations/**
+
+        # --- СОБЫТИЯ (Events) ---
+        - id: ewm-event-service-user-events
+          uri: lb://event-service
+          predicates:
+            - Path=/users/*/events/**
+        - id: ewm-event-service-admin
+          uri: lb://event-service
+          predicates:
+            - Path=/admin/events/**
+
+        # --- ПОЛЬЗОВАТЕЛИ (Users Admin) ---
+        - id: ewm-user-service-admin
+          uri: lb://user-service
+          predicates:
+            - Path=/admin/users/**
+
+        # ==========================================
+        # 2. ОБЩИЕ МАРШРУТЫ (В САМОМ НИЗУ!)
+        # ==========================================
+        - id: ewm-user-service-public
+          uri: lb://user-service
+          predicates:
+            - Path=/users/**
+
+        - id: ewm-event-service-public
+          uri: lb://event-service
+          predicates:
+            - Path=/events/**
+
+        - id: ewm-event-service-categories-admin
+          uri: lb://event-service
+          predicates:
+            - Path=/admin/categories/**
+
+        - id: ewm-event-service-categories-public
+          uri: lb://event-service
+          predicates:
+            - Path=/categories/**

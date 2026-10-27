@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.retry.support.RetryTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
@@ -31,6 +32,7 @@ public class StatsClient extends BaseClient {
         this.statsServiceId = statsServiceId;
     }
 
+    @Async
     public void hit(HitDto hitDto) {
         try {
             log.debug("Отправляем hit: app={}, uri={}, ip={}",

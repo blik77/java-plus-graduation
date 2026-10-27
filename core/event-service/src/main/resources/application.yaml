@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: event-service
+  config:
+    import: "optional:configserver:"
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000  # 2 секунды на установку соединения
+        readTimeout: 5000     # 5 секунд на ожидание ответа
+  circuitbreaker:
+    enabled: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+    instance-id: "${spring.application.name}:${random.value}"
