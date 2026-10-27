@@ -147,7 +147,13 @@ public class EventServiceImpl implements EventService {
 
         if ("VIEWS".equals(params.getSort())) {
             result.sort(Comparator.comparingLong(EventShortDto::getViews).reversed());
-            return result.subList(params.getFrom(), params.getFrom() + params.getSize());
+
+            if (params.getFrom() >= result.size()) {
+                return Collections.emptyList();
+            }
+
+            int toIndex = Math.min(params.getFrom() + params.getSize(), result.size());
+            return result.subList(params.getFrom(), toIndex);
         }
         return result;
     }
