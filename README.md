@@ -1,6 +1,6 @@
 # Explore With Me (Микросервисная архитектура)
 
-Рефакторинг монолитного приложения "Explore With Me" в микросервисную архитектуру с использованием Spring Cloud.
+Рефакторинг монолитного приложения "Explore With Me" в микросервисную архитектуру с использованием Spring Cloud, Apache Kafka и gRPC.
 
 ## Архитектура проекта
 
@@ -39,7 +39,6 @@
    docker-compose up --build
 4. После завершения сборки и старта всех контейнеров, API Gateway будет доступен по адресу: http://localhost:8080.
 5. Панель Eureka Server: http://localhost:8761
-   *(Для локальной разработки (без Docker) необходимо запускать сервисы в строгом порядке: discovery-server → config-server → остальные сервисы).*
 
 ### Локальный запуск (для разработки)
 1. Запустите discovery-server и config-server.
@@ -49,4 +48,6 @@
 - **Java 21**
 - **Spring Cloud** (Eureka, Gateway, Config Server, OpenFeign)
 - **Spring Data JPA** (PostgreSQL)
+- **Apache Kafka** и **Apache Avro**
+- **gRPC**
 - **Docker & Docker Compose**
