@@ -11,16 +11,20 @@ import evm.request.mapper.RequestMapper;
 import evm.request.model.Request;
 import evm.request.model.Status;
 import evm.request.repository.RequestRepositoryJpa;
+import evm.stat.client.CollectorGrpcClient;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.stats.proto.collector.ActionTypeProto;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -30,6 +34,7 @@ public class RequestServiceImpl implements RequestService {
     private final RequestMapper mapper;
     private final EventClient eventClient;
     private final UserClient userClient;
+    private final CollectorGrpcClient collectorClient;
 
     @Override
     public Map<Long, Long> getConfirmedRequestsCounts(List<Long> eventIds) {
@@ -95,7 +100,17 @@ public class RequestServiceImpl implements RequestService {
         Request request = mapper.mapToRequest(userId, eventId);
         request.setStatus(status);
 
-        return mapper.toDto(requestRepository.save(request));
+        ParticipationRequestDto savedDto = mapper.toDto(requestRepository.save(request));
+
+        try {
+            collectorClient.sendUserAction(userId, eventId, ActionTypeProto.ACTION_REGISTER);
+            log.debug("Отправлено действие REGISTER: userId={}, eventId={}", userId, eventId);
+        } catch (Exception e) {
+            // Ловим Exception, чтобы сбой статистики не откатил основную транзакцию создания заявки
+            log.warn("Не удалось отправить действие REGISTER в collector-service: {}", e.getMessage());
+        }
+
+        return savedDto;
     }
 
     @Override
@@ -131,5 +146,12 @@ public class RequestServiceImpl implements RequestService {
         } catch (FeignException e) {
             throw new NotFoundException("Пользователь с ID " + userId + " не найден");
         }
+    }
+
+    @Override
+    public boolean hasConfirmedRequest(Long userId, Long eventId) {
+        return requestRepository.existsByRequesterIdAndEventIdAndStatus(
+                userId, eventId, Status.CONFIRMED
+        );
     }
 }

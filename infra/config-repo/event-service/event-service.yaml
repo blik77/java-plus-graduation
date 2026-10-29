@@ -4,3 +4,16 @@ server:
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/ewm_event
+
+grpc:
+  client:
+    collector-service:
+      address: 'discovery:///collector-service'
+      negotiationType: PLAINTEXT
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+    analyzer-service:
+      address: 'discovery:///analyzer-service'
+      negotiationType: PLAINTEXT
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
