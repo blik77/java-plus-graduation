@@ -13,7 +13,7 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
     Optional<UserInteraction> findByUserIdAndEventId(Long userId, Long eventId);
 
     @Query("SELECT ui FROM UserInteraction ui WHERE ui.userId = :userId ORDER BY ui.timestamp DESC")
-    List<UserInteraction> findByUserIdOrderByTimestampDesc(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
+    List<UserInteraction> findByUserIdOrderByTimestampDesc(@Param("userId") Long userId);
 
     @Query("SELECT ui.eventId FROM UserInteraction ui WHERE ui.userId = :userId")
     List<Long> findEventIdsByUserId(@Param("userId") Long userId);
