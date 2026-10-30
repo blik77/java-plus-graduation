@@ -5,12 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
-import ru.practicum.service.SimilarityStateManager;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
+import ru.practicum.service.SimilarityStateManager;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
@@ -20,6 +22,12 @@ public class UserActionConsumer {
     private final SimilarityStateManager stateManager;
     private final KafkaTemplate<String, EventSimilarityAvro> kafkaTemplate;
 
+    /**
+     * Известные пары, чьи коэффициенты могут измениться при обновлении веса события.
+     * Ключ — событие, значение — связанные с ним события.
+     */
+    private final Map<Long, Set<Long>> relatedEvents = new ConcurrentHashMap<>();
+
     @KafkaListener(topics = "stats.user-actions.v1", groupId = "aggregator-group")
     public void listen(UserActionAvro message) {
         Long userId = message.getUserId();
@@ -28,11 +36,13 @@ public class UserActionConsumer {
         double oldWeight = stateManager.getUserWeight(userId, currentEventId);
 
         if (newWeight <= oldWeight) {
-            log.debug("Вес для user={} event={} не увеличился ({} <= {}), пропускаем", userId, currentEventId, newWeight, oldWeight);
+            log.debug("Вес для user={} event={} не увеличился ({} <= {}), пропускаем",
+                    userId, currentEventId, newWeight, oldWeight);
             return;
         }
 
-        log.info("Обновление веса: user={}, event={}, old={}, new={}", userId, currentEventId, oldWeight, newWeight);
+        log.info("Обновление веса: user={}, event={}, old={}, new={}",
+                userId, currentEventId, oldWeight, newWeight);
 
         stateManager.updateUserWeight(userId, currentEventId, newWeight);
 
@@ -41,34 +51,48 @@ public class UserActionConsumer {
 
         Map<Long, Double> userInteractions = stateManager.getUserInteractions(userId);
         if (userInteractions != null) {
-            for (Map.Entry<Long, Double> entry : userInteractions.entrySet()) {
-                Long otherEventId = entry.getKey();
-                if (otherEventId.equals(currentEventId)) continue;
-
-                double otherWeight = entry.getValue();
-
-                double oldMin = Math.min(oldWeight, otherWeight);
-                double newMin = Math.min(newWeight, otherWeight);
-                double deltaMin = newMin - oldMin;
-
-                if (deltaMin != 0) {
-                    stateManager.addMinWeight(currentEventId, otherEventId, deltaMin);
-                }
-
-                double sMin = stateManager.getMinWeight(currentEventId, otherEventId);
-                double sCurrent = stateManager.getTotalEventWeight(currentEventId);
-                double sOther = stateManager.getTotalEventWeight(otherEventId);
-
-                if (sCurrent > 0 && sOther > 0) {
-                    double similarity = sMin / (Math.sqrt(sCurrent) * Math.sqrt(sOther));
-
-                    long eventA = Math.min(currentEventId, otherEventId);
-                    long eventB = Math.max(currentEventId, otherEventId);
-
-                    sendSimilarity(eventA, eventB, similarity, message.getTimestamp().toEpochMilli());
+            for (Long otherEventId : userInteractions.keySet()) {
+                if (!otherEventId.equals(currentEventId)) {
+                    registerRelatedEvents(currentEventId, otherEventId);
                 }
             }
         }
+
+        // Обновление суммарного веса currentEventId влияет на знаменатель
+        // коэффициента для каждой известной пары с этим событием.
+        Set<Long> related = relatedEvents.get(currentEventId);
+        if (related != null) {
+            for (Long otherEventId : related) {
+                recalculateAndSendSimilarity(
+                        currentEventId,
+                        otherEventId,
+                        message.getTimestamp().toEpochMilli()
+                );
+            }
+        }
+    }
+
+    private void registerRelatedEvents(Long eventA, Long eventB) {
+        relatedEvents.computeIfAbsent(eventA, key -> ConcurrentHashMap.newKeySet()).add(eventB);
+        relatedEvents.computeIfAbsent(eventB, key -> ConcurrentHashMap.newKeySet()).add(eventA);
+    }
+
+    private void recalculateAndSendSimilarity(long eventId, long otherEventId, long timestamp) {
+        double minWeight = stateManager.getMinWeight(eventId, otherEventId);
+        double eventWeight = stateManager.getTotalEventWeight(eventId);
+        double otherEventWeight = stateManager.getTotalEventWeight(otherEventId);
+
+        if (eventWeight <= 0 || otherEventWeight <= 0) {
+            return;
+        }
+
+        double similarity = minWeight
+                / (Math.sqrt(eventWeight) * Math.sqrt(otherEventWeight));
+
+        long eventA = Math.min(eventId, otherEventId);
+        long eventB = Math.max(eventId, otherEventId);
+
+        sendSimilarity(eventA, eventB, similarity, timestamp);
     }
 
     private void sendSimilarity(long eventA, long eventB, double score, long timestamp) {
