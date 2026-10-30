@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication
 @EnableFeignClients
 @EnableCaching
-@ComponentScan(basePackages = {"evm.request", "evm.common"})
+@ComponentScan(basePackages = {"evm.request", "evm.common", "evm.stat"})
 @EntityScan(basePackages = "evm.request")
 @EnableJpaRepositories(basePackages = "evm.request")
 public class RequestServiceApplication {

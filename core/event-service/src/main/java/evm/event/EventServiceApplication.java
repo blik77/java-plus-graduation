@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableAsync
 @EnableFeignClients(basePackages = "evm.event.client")
 @SpringBootApplication
-@ComponentScan(basePackages = {"evm.event", "evm.category", "evm.common"})
+@ComponentScan(basePackages = {"evm.event", "evm.category", "evm.common", "evm.stat"})
 @EntityScan(basePackages = {"evm.event", "evm.category"})
 @EnableJpaRepositories(basePackages = {"evm.event", "evm.category"})
 public class EventServiceApplication {
