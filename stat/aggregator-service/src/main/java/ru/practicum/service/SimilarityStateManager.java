@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import ru.practicum.ewm.stats.avro.ActionTypeAvro;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -17,6 +18,8 @@ public class SimilarityStateManager {
 
     private final Map<String, Double> minWeights = new ConcurrentHashMap<>();
 
+    private final Map<Long, Set<Long>> relatedEvents = new ConcurrentHashMap<>();
+
     public double getWeight(ActionTypeAvro actionType) {
         return switch (actionType) {
             case VIEW -> 0.4;
@@ -26,11 +29,15 @@ public class SimilarityStateManager {
     }
 
     public double getUserWeight(Long userId, Long eventId) {
-        return userEventWeights.getOrDefault(userId, new ConcurrentHashMap<>()).getOrDefault(eventId, 0.0);
+        return userEventWeights
+                .getOrDefault(userId, new ConcurrentHashMap<>())
+                .getOrDefault(eventId, 0.0);
     }
 
     public void updateUserWeight(Long userId, Long eventId, double newWeight) {
-        userEventWeights.computeIfAbsent(userId, k -> new ConcurrentHashMap<>()).put(eventId, newWeight);
+        userEventWeights
+                .computeIfAbsent(userId, key -> new ConcurrentHashMap<>())
+                .put(eventId, newWeight);
     }
 
     public double getTotalEventWeight(Long eventId) {
@@ -49,6 +56,29 @@ public class SimilarityStateManager {
     public void addMinWeight(Long eventA, Long eventB, double delta) {
         String key = getPairKey(eventA, eventB);
         minWeights.merge(key, delta, Double::sum);
+    }
+
+    public Set<Long> getRelatedEvents(Long eventId) {
+        if (eventId == null) {
+            return Set.of();
+        }
+
+        Set<Long> events = relatedEvents.get(eventId);
+        return events == null ? Set.of() : Set.copyOf(events);
+    }
+
+    public void registerRelatedPair(Long eventA, Long eventB) {
+        if (eventA == null || eventB == null || eventA.equals(eventB)) {
+            return;
+        }
+
+        relatedEvents
+                .computeIfAbsent(eventA, key -> ConcurrentHashMap.newKeySet())
+                .add(eventB);
+
+        relatedEvents
+                .computeIfAbsent(eventB, key -> ConcurrentHashMap.newKeySet())
+                .add(eventA);
     }
 
     private String getPairKey(Long eventA, Long eventB) {
