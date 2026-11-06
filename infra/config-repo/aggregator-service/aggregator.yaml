@@ -7,8 +7,6 @@ logging:
     org.springframework.cloud.netflix.eureka: DEBUG
 
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/ewm_aggregator
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
