@@ -118,6 +118,23 @@ services:
     networks:
       - app-network
 
+  aggregator-db:
+    image: postgres:16.1
+    container_name: postgres-ewm-aggregator-db
+    ports:
+      - "6548:5432"
+    environment:
+      - POSTGRES_DB=ewm_aggregator
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=12345
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - app-network
+
   discovery-server:
     build: infra/discovery-server
     image: discovery-server
@@ -341,7 +358,13 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
+      aggregator-db:
+        condition: service_healthy
     environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://aggregator-db:5432/ewm_aggregator
+      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - EUREKA_URI=http://discovery-server:8761/eureka/
     networks:
       - app-network

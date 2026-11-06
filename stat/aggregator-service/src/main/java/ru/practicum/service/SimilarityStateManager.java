@@ -101,10 +101,11 @@ public class SimilarityStateManager {
                 .put(eventId, newWeight);
 
         jdbcTemplate.update("""
-                MERGE INTO user_event_weights (user_id, event_id, weight)
-                KEY (user_id, event_id)
-                VALUES (?, ?, ?)
-                """, userId, eventId, newWeight);
+            INSERT INTO user_event_weights (user_id, event_id, weight)
+            VALUES (?, ?, ?)
+            ON CONFLICT (user_id, event_id)
+            DO UPDATE SET weight = EXCLUDED.weight
+            """, userId, eventId, newWeight);
     }
 
     public double getTotalEventWeight(Long eventId) {
@@ -112,13 +113,14 @@ public class SimilarityStateManager {
     }
 
     public void addTotalEventWeight(Long eventId, double delta) {
-        double updatedWeight = totalEventWeights.merge(eventId, delta, Double::sum);
+        totalEventWeights.merge(eventId, delta, Double::sum);
 
         jdbcTemplate.update("""
-                MERGE INTO total_event_weights (event_id, weight)
-                KEY (event_id)
-                VALUES (?, ?)
-                """, eventId, updatedWeight);
+            INSERT INTO total_event_weights (event_id, weight)
+            VALUES (?, ?)
+            ON CONFLICT (event_id)
+            DO UPDATE SET weight = total_event_weights.weight + EXCLUDED.weight
+            """, eventId, delta);
     }
 
     public double getMinWeight(Long eventA, Long eventB) {
@@ -127,16 +129,17 @@ public class SimilarityStateManager {
 
     public void addMinWeight(Long eventA, Long eventB, double delta) {
         String key = getPairKey(eventA, eventB);
-        double updatedWeight = minWeights.merge(key, delta, Double::sum);
+        minWeights.merge(key, delta, Double::sum);
 
         long firstEventId = Math.min(eventA, eventB);
         long secondEventId = Math.max(eventA, eventB);
 
         jdbcTemplate.update("""
-                MERGE INTO event_pair_min_weights (event_a, event_b, weight)
-                KEY (event_a, event_b)
-                VALUES (?, ?, ?)
-                """, firstEventId, secondEventId, updatedWeight);
+            INSERT INTO event_pair_min_weights (event_a, event_b, weight)
+            VALUES (?, ?, ?)
+            ON CONFLICT (event_a, event_b)
+            DO UPDATE SET weight = event_pair_min_weights.weight + EXCLUDED.weight
+            """, firstEventId, secondEventId, delta);
     }
 
     private String getPairKey(Long eventA, Long eventB) {
