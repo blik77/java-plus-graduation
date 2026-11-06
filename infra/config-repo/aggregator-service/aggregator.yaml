@@ -7,6 +7,13 @@ logging:
     org.springframework.cloud.netflix.eureka: DEBUG
 
 spring:
+  datasource:
+    url: jdbc:h2:file:./data/similarity;AUTO_SERVER=TRUE
+    username: sa
+    password:
+  sql:
+    init:
+      mode: never
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
