@@ -12,7 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SimilarityStateManager {
 
     private final Map<Long, Map<Long, Double>> userEventWeights = new ConcurrentHashMap<>();
+
     private final Map<Long, Double> totalEventWeights = new ConcurrentHashMap<>();
+
     private final Map<String, Double> minWeights = new ConcurrentHashMap<>();
 
     public double getWeight(ActionTypeAvro actionType) {
@@ -40,11 +42,13 @@ public class SimilarityStateManager {
     }
 
     public double getMinWeight(Long eventA, Long eventB) {
-        return minWeights.getOrDefault(getPairKey(eventA, eventB), 0.0);
+        String key = getPairKey(eventA, eventB);
+        return minWeights.getOrDefault(key, 0.0);
     }
 
     public void addMinWeight(Long eventA, Long eventB, double delta) {
-        minWeights.merge(getPairKey(eventA, eventB), delta, Double::sum);
+        String key = getPairKey(eventA, eventB);
+        minWeights.merge(key, delta, Double::sum);
     }
 
     private String getPairKey(Long eventA, Long eventB) {
@@ -52,12 +56,6 @@ public class SimilarityStateManager {
     }
 
     public Map<Long, Double> getUserInteractions(Long userId) {
-        return Map.copyOf(userEventWeights.getOrDefault(userId, Map.of()));
-    }
-
-    public void clear() {
-        userEventWeights.clear();
-        totalEventWeights.clear();
-        minWeights.clear();
+        return userEventWeights.getOrDefault(userId, new ConcurrentHashMap<>());
     }
 }
