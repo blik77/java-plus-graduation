@@ -14,4 +14,8 @@ public class RequestClientFallback implements RequestClient {
             .collect(Collectors.toMap(id -> id, id -> 0L));
     }
 
+    @Override
+    public boolean hasConfirmedRequest(Long userId, Long eventId) {
+        return false;
+    }
 }

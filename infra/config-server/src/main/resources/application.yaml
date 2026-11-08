@@ -19,6 +19,9 @@ spring:
             - classpath:/config-repo/user-service/
             - classpath:/config-repo/compilation-service/
             - classpath:/config-repo/comment-service/
+            - classpath:/config-repo/aggregator-service/
+            - classpath:/config-repo/analyzer-service/
+            - classpath:/config-repo/collector-service/
 
 management:
   endpoints:

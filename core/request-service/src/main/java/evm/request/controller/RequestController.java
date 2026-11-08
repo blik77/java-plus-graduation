@@ -3,11 +3,13 @@ package evm.request.controller;
 import evm.request.dto.ParticipationRequestDto;
 import evm.request.service.RequestService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
@@ -27,6 +29,8 @@ public class RequestController {
         @PathVariable Long userId,
         @RequestParam(value = "eventId") Long eventId
     ) {
+        log.info("POST /users/{}/requests — eventId={}", userId, eventId);
+
         return service.save(userId, eventId);
     }
 
@@ -39,4 +43,12 @@ public class RequestController {
         return service.cancel(userId, requestId);
     }
 
+    @GetMapping("/{userId}/requests/{eventId}/confirmed")
+    @ResponseStatus(HttpStatus.OK)
+    public boolean hasConfirmedRequest(
+            @PathVariable Long userId,
+            @PathVariable Long eventId
+    ) {
+        return service.hasConfirmedRequest(userId, eventId);
+    }
 }

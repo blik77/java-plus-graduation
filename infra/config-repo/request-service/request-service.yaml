@@ -4,3 +4,10 @@ server:
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/ewm_request
+
+grpc:
+  client:
+    collector-service:
+      address: 'discovery:///collector-service'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true

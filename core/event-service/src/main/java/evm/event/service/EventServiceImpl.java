@@ -2,6 +2,7 @@ package evm.event.service;
 
 import evm.category.model.Category;
 import evm.category.repository.CategoryRepository;
+import evm.common.exceptions.ValidationException;
 import evm.event.client.RequestClient;
 import evm.event.client.UserClient;
 import evm.event.dto.*;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.stats.proto.dashboard.RecommendedEventProto;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -49,6 +51,7 @@ public class EventServiceImpl implements EventService {
     private final UserClient userClient;
     private final RequestClient requestClient;
     private final StatsClient statsClient;
+    private final StatsService statsService;
 
     @Override
     @Transactional(readOnly = true)
@@ -62,7 +65,7 @@ public class EventServiceImpl implements EventService {
             return Collections.emptyList();
         }
 
-        Map<Long, Long> viewsMap = getViewsMap(events);
+        Map<Long, Double> ratingMap = getRatingMap(events);
         Map<Long, Long> confirmedMap = getConfirmedRequestsMap(events);
 
         List<Long> initiatorIds = events.stream().map(Event::getInitiatorId).distinct().collect(Collectors.toList());
@@ -72,7 +75,7 @@ public class EventServiceImpl implements EventService {
         return events.stream()
             .map(e -> EventMapper.toShortDto(
                 e,
-                viewsMap.getOrDefault(e.getId(), 0L),
+                ratingMap.getOrDefault(e.getId(), 0.0),
                 confirmedMap.getOrDefault(e.getId(), 0L),
                 userNamesMap.getOrDefault(e.getInitiatorId(), "Unknown")
             ))
@@ -129,7 +132,7 @@ public class EventServiceImpl implements EventService {
 
         Map<Long, Long> confirmedMap = getConfirmedRequestsMap(events);
 
-        Map<Long, Long> viewsMap = getViewsMap(events);
+        Map<Long, Double> ratingMap = getRatingMap(events);
 
         List<Long> initiatorIds = events.stream().map(Event::getInitiatorId).distinct().collect(Collectors.toList());
 
@@ -139,14 +142,14 @@ public class EventServiceImpl implements EventService {
         List<EventShortDto> result = events.stream()
             .map(e -> EventMapper.toShortDto(
                 e,
-                viewsMap.getOrDefault(e.getId(), 0L),
+                ratingMap.getOrDefault(e.getId(), 0.0),
                 confirmedMap.getOrDefault(e.getId(), 0L),
                 userNamesMap.getOrDefault(e.getInitiatorId(), "Unknown")
             ))
             .collect(Collectors.toList());
 
         if ("VIEWS".equals(params.getSort())) {
-            result.sort(Comparator.comparingLong(EventShortDto::getViews).reversed());
+            result.sort(Comparator.comparingDouble(EventShortDto::getRating).reversed());
 
             if (params.getFrom() >= result.size()) {
                 return Collections.emptyList();
@@ -180,16 +183,22 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(readOnly = true)
-    public EventFullDto getPublicEventById(Long id, HttpServletRequest request) {
+    public EventFullDto getPublicEventById(Long id, Long userId) {
         Event event = eventRepository.findByIdAndState(id, EventState.PUBLISHED)
             .orElseThrow(() -> new NotFoundException("Событие с id=" + id + " не найдено"));
 
-        sendHit(request);
-        Long views = getViews(event);
-        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);
+        if (userId != null) {
+            statsService.sendViewAction(userId, id);
+        }
+
+        Double rating = statsService.getEventRating(id);
+
+        Map<Long, Long> confirmedMap = requestClient.getConfirmedCounts(List.of(id));
+        Long confirmed = confirmedMap.getOrDefault(id, 0L);
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
-        return EventMapper.toFullDto(event, views, confirmed, userName);
+
+        return EventMapper.toFullDto(event, rating, confirmed, userName);
     }
 
     @Override
@@ -198,7 +207,7 @@ public class EventServiceImpl implements EventService {
         Pageable pageable = OffsetBasedPageRequest.of(from, size);
         List<Event> events = eventRepository.findAllByInitiatorId(userId, pageable);
 
-        Map<Long, Long> viewsMap = getViewsMap(events);
+        Map<Long, Double> ratingMap = getRatingMap(events);
         Map<Long, Long> confirmedMap = getConfirmedRequestsMap(events);
 
         String userName = userClient.getUserById(userId).getName();
@@ -206,7 +215,7 @@ public class EventServiceImpl implements EventService {
         return events.stream()
             .map(e -> EventMapper.toShortDto(
                 e,
-                viewsMap.getOrDefault(e.getId(), 0L),
+                ratingMap.getOrDefault(e.getId(), 0.0),
                 confirmedMap.getOrDefault(e.getId(), 0L),
                 userName
             ))
@@ -223,7 +232,7 @@ public class EventServiceImpl implements EventService {
         Event saved = eventRepository.save(event);
 
         String userName = userClient.getUserById(userId).getName();
-        return EventMapper.toFullDto(saved, 0L, 0L, userName);
+        return EventMapper.toFullDto(saved, 0.0, 0L, userName);
     }
 
     @Override
@@ -235,11 +244,13 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException("Событие с id=" + eventId + " не найдено");
         }
 
-        Long views = getViews(event);
-        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);
+        Double rating = statsService.getEventRating(eventId);
+
+        Map<Long, Long> confirmedMap = requestClient.getConfirmedCounts(List.of(eventId));
+        Long confirmed = confirmedMap.getOrDefault(eventId, 0L);
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
-        return EventMapper.toFullDto(event, views, confirmed, userName);
+        return EventMapper.toFullDto(event, rating, confirmed, userName);
     }
 
     @Override
@@ -257,10 +268,14 @@ public class EventServiceImpl implements EventService {
 
         applyUserUpdates(event, dto);
         Event saved = eventRepository.save(event);
-        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);
+
+        Double rating = statsService.getEventRating(eventId);
+
+        Map<Long, Long> confirmedMap = requestClient.getConfirmedCounts(List.of(eventId));
+        Long confirmed = confirmedMap.getOrDefault(eventId, 0L);
 
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
-        return EventMapper.toFullDto(saved, getViews(saved), confirmed, userName);
+        return EventMapper.toFullDto(saved, rating, confirmed, userName);
     }
 
     @Override
@@ -277,7 +292,7 @@ public class EventServiceImpl implements EventService {
 
         if (events.isEmpty()) return List.of();
 
-        Map<Long, Long> viewsMap = getViewsMap(events);
+        Map<Long, Double> ratingMap = getRatingMap(events);
         Map<Long, Long> confirmedMap = getConfirmedRequestsMap(events);
 
         List<Long> initiatorIds = events.stream().map(Event::getInitiatorId).distinct().collect(Collectors.toList());
@@ -287,7 +302,7 @@ public class EventServiceImpl implements EventService {
         return events.stream()
             .map(e -> EventMapper.toFullDto(
                 e,
-                viewsMap.getOrDefault(e.getId(), 0L),
+                ratingMap.getOrDefault(e.getId(), 0.0),
                 confirmedMap.getOrDefault(e.getId(), 0L),
                 userNamesMap.getOrDefault(e.getInitiatorId(), "Unknown")
             ))
@@ -300,10 +315,14 @@ public class EventServiceImpl implements EventService {
         Event event = getEventOrThrow(eventId);
         applyAdminUpdates(event, dto);
         Event saved = eventRepository.save(event);
-        Long confirmed = getConfirmedRequestsMap(List.of(event)).getOrDefault(event.getId(), 0L);
 
+        Map<Long, Long> confirmedMap = requestClient.getConfirmedCounts(List.of(eventId));
+        Long confirmed = confirmedMap.getOrDefault(eventId, 0L);
+
+        Double rating = statsService.getEventRating(eventId);
         String userName = userClient.getUserById(event.getInitiatorId()).getName();
-        return EventMapper.toFullDto(saved, getViews(saved), confirmed, userName);
+
+        return EventMapper.toFullDto(saved, rating, confirmed, userName);
     }
 
     // Отправляет хит в сервис статистики
@@ -370,6 +389,20 @@ public class EventServiceImpl implements EventService {
             log.warn("Не удалось получить количество подтвержденных заявок: {}", e.getMessage());
             return Map.of();
         }
+    }
+
+    private Map<Long, Double> getRatingMap(List<Event> events) {
+        List<Long> eventIds = events.stream()
+                .map(Event::getId)
+                .collect(Collectors.toList());
+
+        List<RecommendedEventProto> protos = statsService.getInteractionsCount(eventIds);
+
+        return protos.stream()
+                .collect(Collectors.toMap(
+                        RecommendedEventProto::getEventId,
+                        RecommendedEventProto::getScore
+                ));
     }
 
     // Применяет изменения из запроса пользователя к событию
@@ -486,5 +519,53 @@ public class EventServiceImpl implements EventService {
 
         return EventMapper.toInternalInfoDto(event, initiatorName);
 
+    }
+
+    /**
+     * Вспомогательный метод: проверяет, есть ли у пользователя подтвержденная заявка на событие.
+     */
+    @Override
+    public boolean hasUserAttendedEvent(Long userId, Long eventId) {
+        try {
+            return requestClient.hasConfirmedRequest(userId, eventId);
+        } catch (Exception e) {
+            log.warn("Не удалось проверить участие пользователя {} в мероприятии {}: {}",
+                    userId, eventId, e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    @Transactional
+    public void likeEvent(Long userId, Long eventId) {
+        Event event = eventRepository.findByIdAndState(eventId, EventState.PUBLISHED)
+                .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не найдено или не опубликовано"));
+
+        if (!hasUserAttendedEvent(userId, eventId)) {
+            throw new ValidationException("Пользователь не посещал это мероприятие, лайк недоступен");
+        }
+
+        statsService.sendLikeAction(userId, eventId);
+        log.info("Лайк успешно отправлен: userId={}, eventId={}", userId, eventId);
+    }
+
+    @Override
+    public List<RecommendedEventDto> getRecommendationsForUser(Long userId, int maxResults) {
+        return statsService.getRecommendations(userId, maxResults).stream()
+                .map(proto -> RecommendedEventDto.builder()
+                        .eventId(proto.getEventId())
+                        .score(proto.getScore())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    public List<RecommendedEventDto> getSimilarEvents(Long eventId, Long userId, int maxResults) {
+        return statsService.getSimilarEvents(eventId, userId, maxResults).stream()
+                .map(proto -> RecommendedEventDto.builder()
+                        .eventId(proto.getEventId())
+                        .score(proto.getScore())
+                        .build())
+                .toList();
     }
 }

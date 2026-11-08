@@ -1,0 +1,25 @@
+grpc:
+  server:
+    port: 0
+
+server:
+  port: 0
+
+logging:
+  level:
+    com.netflix.discovery: DEBUG
+    org.springframework.cloud.netflix.eureka: DEBUG
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ewm_recommendations
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: analyzer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: evm.stat.config.AvroDeserializer
+        spring.json.type.mapping: "stats.user-actions.v1:ru.practicum.ewm.stats.avro.UserActionAvro, stats.events-similarity.v1:ru.practicum.ewm.stats.avro.EventSimilarityAvro"
